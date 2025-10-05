@@ -119,7 +119,7 @@
   <h1>神経衰弱</h1>
 
   <div class="stats">
-    <div>残り回数: <span id="turns">10</span></div>
+    <div>残り回数: <span id="turns">15</span></div>
     <div>得点: <span id="score">0</span> / 8</div>
   </div>
 
@@ -200,14 +200,14 @@
             won = true;
             gameOver = true;
             showOverlay();
-          } else if (turns >= 10) {
+          } else if (turns >= 15) {
             gameOver = true;
             showOverlay();
           }
         } else {
           setTimeout(() => {
             flipped = [];
-            if (turns >= 10) {
+            if (turns >= 15) {
               gameOver = true;
               showOverlay();
             }
@@ -232,7 +232,7 @@
     }
 
     function updateStats() {
-      turnsDisplay.textContent = 10 - turns;
+      turnsDisplay.textContent = 15 - turns;
       scoreDisplay.textContent = score;
     }
 
