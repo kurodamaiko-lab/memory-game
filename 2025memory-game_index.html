@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>神経衰弱ゲーム</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Helvetica Neue", sans-serif;
+      background: linear-gradient(to bottom right, #a78bfa, #f9a8d4, #93c5fd);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      color: white;
+      font-size: 3rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      margin-bottom: 1rem;
+    }
+
+    .stats {
+      background: rgba(255,255,255,0.9);
+      border-radius: 12px;
+      padding: 10px 30px;
+      display: flex;
+      gap: 2rem;
+      font-size: 1.2rem;
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      margin-bottom: 1.5rem;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, 90px);
+      grid-gap: 12px;
+    }
+
+    .card {
+      width: 90px;
+      height: 90px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      transition: transform 0.3s ease, background 0.3s ease;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+    }
+
+    .card:hover {
+      transform: scale(1.05);
+    }
+
+    .card.flipped {
+      background: white;
+      color: #333;
+    }
+
+    .card.matched {
+      background: white;
+      color: #333;
+      opacity: 0.5;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .overlay-content {
+      background: white;
+      border-radius: 24px;
+      padding: 40px 60px;
+      text-align: center;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    button {
+      background: linear-gradient(to right, #3b82f6, #8b5cf6);
+      border: none;
+      border-radius: 9999px;
+      padding: 12px 32px;
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    button:hover {
+      background: linear-gradient(to right, #2563eb, #7c3aed);
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <h1>神経衰弱</h1>
+
+  <div class="stats">
+    <div>残り回数: <span id="turns">10</span></div>
+    <div>得点: <span id="score">0</span> / 8</div>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <button id="resetBtn" style="margin-top: 20px;">ゲームをリセット</button>
+
+  <div class="overlay" id="overlay" style="display:none;">
+    <div class="overlay-content" id="overlayContent"></div>
+  </div>
+
+  <script>
+    const symbols = ['🌸', '🌺', '🌻', '🌼', '🌷', '🌹', '🍎', '🍊'];
+    let cards = [];
+    let flipped = [];
+    let matched = [];
+    let turns = 0;
+    let score = 0;
+    let gameOver = false;
+    let won = false;
+
+    const board = document.getElementById('board');
+    const turnsDisplay = document.getElementById('turns');
+    const scoreDisplay = document.getElementById('score');
+    const overlay = document.getElementById('overlay');
+    const overlayContent = document.getElementById('overlayContent');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function initializeGame() {
+      cards = [...symbols, ...symbols]
+        .sort(() => Math.random() - 0.5)
+        .map((symbol, i) => ({ id: i, symbol }));
+
+      flipped = [];
+      matched = [];
+      turns = 0;
+      score = 0;
+      gameOver = false;
+      won = false;
+      updateStats();
+      renderBoard();
+      overlay.style.display = 'none';
+    }
+
+    function renderBoard() {
+      board.innerHTML = '';
+      cards.forEach((card) => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        if (flipped.includes(card.id) || matched.includes(card.id)) {
+          div.classList.add('flipped');
+          if (matched.includes(card.id)) div.classList.add('matched');
+          div.textContent = card.symbol;
+        } else {
+          div.textContent = '';
+        }
+        div.addEventListener('click', () => handleCardClick(card.id));
+        board.appendChild(div);
+      });
+    }
+
+    function handleCardClick(id) {
+      if (gameOver || flipped.length === 2 || flipped.includes(id) || matched.includes(id)) return;
+      flipped.push(id);
+      renderBoard();
+
+      if (flipped.length === 2) {
+        const [first, second] = flipped;
+        const firstCard = cards.find(c => c.id === first);
+        const secondCard = cards.find(c => c.id === second);
+        turns++;
+
+        if (firstCard.symbol === secondCard.symbol) {
+          matched.push(first, second);
+          score++;
+          flipped = [];
+          if (matched.length === 16) {
+            won = true;
+            gameOver = true;
+            showOverlay();
+          } else if (turns >= 10) {
+            gameOver = true;
+            showOverlay();
+          }
+        } else {
+          setTimeout(() => {
+            flipped = [];
+            if (turns >= 10) {
+              gameOver = true;
+              showOverlay();
+            }
+            renderBoard();
+          }, 1000);
+        }
+        updateStats();
+      }
+    }
+
+    function showOverlay() {
+      overlay.style.display = 'flex';
+      overlayContent.innerHTML = won
+        ? `<div style="font-size:80px;">🏆</div>
+           <h2 style="color:#d97706;font-size:2rem;">おめでとう！</h2>
+           <p>全てのペアを見つけました！</p>
+           <button onclick="initializeGame()">もう一度プレイ</button>`
+        : `<div style="font-size:80px;">😢</div>
+           <h2 style="color:#ef4444;font-size:2rem;">あなたの負け</h2>
+           <p>10回以内にクリアできませんでした</p>
+           <button onclick="initializeGame()">もう一度プレイ</button>`;
+    }
+
+    function updateStats() {
+      turnsDisplay.textContent = 10 - turns;
+      scoreDisplay.textContent = score;
+    }
+
+    resetBtn.addEventListener('click', initializeGame);
+
+    initializeGame();
+  </script>
+</body>
+</html>
